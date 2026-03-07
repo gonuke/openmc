@@ -199,6 +199,38 @@ def test_powerlaw():
     assert_sample_mean(weighted_sample, exp_mean)
     assert np.all(weights != 1.0)
 
+@pytest.mark.flaky(reruns=1)
+def test_powerlawneg():
+    a, b, n = -10.0, 10.0, 2.0
+    d = openmc.stats.PowerLaw(a, b, n)
+    elem = d.to_xml_element('distribution')
+
+    d = openmc.stats.PowerLaw.from_xml_element(elem)
+    assert d.a == a
+    assert d.b == b
+    assert d.n == n
+    assert len(d) == 3
+
+    # Determine mean of distribution
+    exp_mean = 0
+
+    # sample power law distribution and check that the mean of the samples is
+    # within 4 std. dev. of the expected mean
+    n_samples = 1_000_000
+    samples, weights = d.sample(n_samples)
+    assert_sample_mean(samples, exp_mean)
+    assert np.all(weights == 1.0)
+
+    # Test biased distribution
+    d.bias = openmc.stats.Uniform(a, b)
+    bias_elem = d.to_xml_element('distribution')
+    d2 = openmc.stats.Univariate.from_xml_element(bias_elem)
+    assert isinstance (d2.bias, openmc.stats.Uniform)
+    samples, weights = d2.sample(n_samples)
+    weighted_sample = samples * weights
+    assert_sample_mean(weighted_sample, exp_mean)
+    assert np.all(weights != 1.0)
+
 
 @pytest.mark.flaky(reruns=1)
 def test_maxwell():
